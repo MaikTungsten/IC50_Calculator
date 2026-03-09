@@ -10,4 +10,4 @@ First, we built an image for our application from the **DOCKERFILE**. We run the
 
 ## Acknowledgements
 
-incl. people and softwar
+incl. people and software
