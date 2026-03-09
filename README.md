@@ -1,8 +1,16 @@
 # IC50_Calculator
 
-## Subheading
 
 ## Code - how to run locally
+
+1. Create a conda or pthon enviroenmnt from the 
+2. Run
+
+To run 
+
+```bash
+streamlit run app.py
+```
 
 ## Deployment
 
