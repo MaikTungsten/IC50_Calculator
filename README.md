@@ -18,4 +18,8 @@ First, we built an image for our application from the **DOCKERFILE**. We run the
 
 ## Acknowledgements
 
-incl. people and software
+Development & Supervision
+This app was developed by Sogand Ahari under the supervision of Dr. Maik Wolfram-Schauerte, whose guidance and expertise were invaluable throughout this project.
+
+Support
+In the case of difficulties, errors, comments or suggestions, please contact sogand.hassan-ahari@student.uni-tuebingen.de.
