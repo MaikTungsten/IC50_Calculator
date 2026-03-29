@@ -1,5 +1,9 @@
 # IC50_Calculator
 
+By uploading two files: 
+(1) A raw MTS plate reader data for a 96-well plate, 
+(2) a respective plate template, 
+this app extracts 490 & 630 nm absorbance grids, adjusts background, maps well identities, and produces exportable data-parsed tables, and interactive and annotated IC₅₀ dose-response curves for compounds of interest.
 
 ## Code - how to run locally
 

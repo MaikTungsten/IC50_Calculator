@@ -111,7 +111,7 @@ with st.container(border=False):
 ▶ Colorimetric, absorbance-based MTS assays indirectly measure cellular viability (e.g. 2D tumor cell line drug screening assays) as affected by treatment conditions.<br><br>
 ▶ The MTS reagent can be added to each plate at a specific time point in an experiment to measure relative viability via a plate reader.<br><br>
 ▶ Raw outputs can be used to calculate a drug's half maximal inhibitory (IC₅₀) concentration, indicative of its efficacy/toxicity.<br><br>
-✔️ By uploading two files: 1) raw MTS data for a 96-well plate, 2) a respective plate template, this app extracts 490 & 630 nm absorbance grids, corrects for background, maps well identities, and produces <strong>exportable tables</strong> for each step, and <strong>annotated IC₅₀ dose-response curves</strong> for compounds of interest.<br><br>
+✔️ By uploading two files: 1) a raw MTS plate reader data for a 96-well plate, 2) a respective plate template, this app extracts 490 & 630 nm absorbance grids, adjusts background, maps well identities, and produces <strong>exportable tables</strong> for each step, and <strong>annotated IC₅₀ dose-response curves</strong> for compounds of interest.<br><br>
 ✔️ Alternatively, you can also design your plate template in-app.
 </div>
 """, unsafe_allow_html=True)
