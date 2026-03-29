@@ -29,3 +29,13 @@ This app was developed by Sogand Ahari under the supervision of Dr. Maik Wolfram
 
 **Support**
 In the case of difficulties, errors, comments, or suggestions, please contact sogand.hassan-ahari@student.uni-tuebingen.de.
+
+## Python Packages used
+Streamlit	Web app framework and interactive UI
+Pandas	Data manipulation and tabular analysis
+NumPy	Numerical computing and array operations
+SciPy	4PL curve fitting (scipy.optimize.curve_fit)
+Plotly	Interactive data visualisation
+Matplotlib	Underlying rendering support for static figure export
+OpenPyXL	Reading and writing Excel files
+Kaleido	High-resolution static image export for Plotly figures
