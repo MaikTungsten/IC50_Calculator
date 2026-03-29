@@ -17,7 +17,6 @@ conda activate myenv
 ```bash
 streamlit run app.py
 ```
-```
 
 ## Deployment
 
