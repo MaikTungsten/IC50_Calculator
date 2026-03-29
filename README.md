@@ -34,11 +34,11 @@ In the case of difficulties, errors, comments, or suggestions, please contact so
 
 | Package | Purpose |
 |---|---|
-| Streamlit | Web app framework and interactive UI |
-| Pandas | Data manipulation and tabular analysis |
-| NumPy | Numerical computing and array operations |
-| SciPy | 4PL curve fitting (scipy.optimize.curve_fit) |
-| Plotly | Interactive data visualisation |
-| Matplotlib | Underlying rendering support for static figure export |
-| OpenPyXL | Reading and writing Excel files |
-| Kaleido | High-resolution static image export for Plotly figures |
+| Streamlit (v1.54.0) | Web app framework and interactive UI |
+| Pandas (v2.3.3) | Data manipulation and tabular analysis |
+| NumPy (v2.4.2) | Numerical computing and array operations |
+| SciPy (v1.17.0) | 4PL curve fitting (scipy.optimize.curve_fit) |
+| Plotly (v6.5.2) | Interactive data visualisation |
+| Matplotlib (v3.10.8) | Underlying rendering support for static figure export |
+| OpenPyXL (v3.1.5) | Reading and writing Excel files |
+| Kaleido (v1.2.0) | High-resolution static image export for Plotly figures |
