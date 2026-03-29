@@ -3,18 +3,25 @@
 
 ## Code - how to run locally
 
-1. Create a conda or pthon enviroenmnt from the 
-2. Run
+1. Create a conda environment from the `environment.yml` file:
+```bash
+conda env create -f environment.yml
+```
 
-To run 
+2. Activate the environment:
+```bash
+conda activate myenv
+```
 
+3. Run the app:
 ```bash
 streamlit run app.py
+```
 ```
 
 ## Deployment
 
-First, we built an image for our application from the **DOCKERFILE**. We run the application in a docker container on a Ubuntu Server. The application is available via.
+First, we built an image for our application from the **DOCKERFILE**. We run the application in a docker container on a Ubuntu Server. The application is available via https://ic50calculator.cs.uni-tuebingen.de/.
 
 ## Acknowledgements
 
