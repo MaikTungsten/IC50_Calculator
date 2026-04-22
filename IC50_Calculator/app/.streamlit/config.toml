@@ -1,8 +1,0 @@
-[server]
-maxUploadSize = 1000  # max upload size in MB (e.g., 1 GB)
-
-# [theme]
-# base="light"
-# primaryColor="#ff9900"
-# backgroundColor="#FFFFFF"
-# secondaryBackgroundColor="#ffebcc"

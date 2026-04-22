@@ -111,7 +111,7 @@ with st.container(border=False):
 ▶ Colorimetric, absorbance-based MTS assays indirectly measure cellular viability (e.g. 2D tumor cell line drug screening assays) as affected by treatment conditions.<br><br>
 ▶ The MTS reagent can be added to each plate at a specific time point in an experiment to measure relative viability via a plate reader.<br><br>
 ▶ Raw outputs can be used to calculate a drug's half maximal inhibitory (IC₅₀) concentration, indicative of its efficacy/toxicity.<br><br>
-✔️ By uploading two files: 1) raw MTS data for a 96-well plate, 2) a respective plate template, this app extracts 490 & 630 nm absorbance grids, corrects for background, maps well identities, and produces <strong>exportable tables</strong> for each step, and <strong>annotated IC₅₀ dose-response curves</strong> for compounds of interest.<br><br>
+✔️ By uploading two files: 1) a raw MTS plate reader data for a 96-well plate, 2) a respective plate template, this app extracts 490 & 630 nm absorbance grids, adjusts background, maps well identities, and produces <strong>exportable, data-parsed tables</strong> for each step, and <strong>interactive IC₅₀ dose-response curves</strong> for compounds of interest.<br><br>
 ✔️ Alternatively, you can also design your plate template in-app.
 </div>
 """, unsafe_allow_html=True)
@@ -175,10 +175,9 @@ def parse_raw_mts(file_bytes, filename=""):
                 if len(vals) == 12:
                     grids["630"][current_row_label] = vals
 
-        if len(grids["490"]) != 8 or len(grids["630"]) != 8:
+        if len(grids["490"]) != 8:
             raise ValueError(
-                f"TXT parse: expected 8 rows for each wavelength. "
-                f"Got 490={len(grids['490'])}, 630={len(grids['630'])}."
+                f"TXT parse: expected 8 rows for 490 nm. Got {len(grids['490'])}."
             )
 
         cols = list(range(1, 13))
@@ -223,9 +222,13 @@ def parse_raw_mts(file_bytes, filename=""):
                 row_label = str(v).strip()
                 break
         if row_label is not None:
-            grids["490"][row_label] = np.array([_parse_number(v) for v in df.iloc[i,     col_start:col_end].values])
-            grids["630"][row_label] = np.array([_parse_number(v) for v in df.iloc[i + 1, col_start:col_end].values])
-            i += 2
+            grids["490"][row_label] = np.array([_parse_number(v) for v in df.iloc[i, col_start:col_end].values])
+            next_row = df.iloc[i + 1] if i + 1 < len(df) else None
+            if next_row is not None and str(next_row.iloc[0]).strip() not in ROW_LABELS and str(next_row.iloc[-1]).strip().replace(".0","") == "630":
+                grids["630"][row_label] = np.array([_parse_number(v) for v in df.iloc[i + 1, col_start:col_end].values])
+                i += 2
+            else:
+                i += 1
         else:
             i += 1
 
@@ -236,9 +239,16 @@ def parse_raw_mts(file_bytes, filename=""):
     abs490 = pd.DataFrame(grids["490"], index=cols).T
     abs490.index = ROW_LABELS
     abs490.columns = cols
-    abs630 = pd.DataFrame(grids["630"], index=cols).T
-    abs630.index = ROW_LABELS
-    abs630.columns = cols
+
+    if len(grids["630"]) == 8:
+        abs630 = pd.DataFrame(grids["630"], index=cols).T
+        abs630.index = ROW_LABELS
+        abs630.columns = cols
+    else:
+        abs630 = pd.DataFrame(
+            np.zeros((8, 12)), index=ROW_LABELS, columns=cols
+        )
+
     return abs490, abs630
 
 def parse_template(file_bytes):
@@ -311,7 +321,7 @@ def color_plate(plate_df, title=""):
         z,
         x=[str(c) for c in plate_df.columns],
         y=list(plate_df.index),
-        color_continuous_scale="RdYlGn",
+        color_continuous_scale="Viridis",
         aspect="auto",
         title=title,
     )
@@ -336,10 +346,14 @@ def color_plate(plate_df, title=""):
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ Options")
-    normalize = st.checkbox("Normalize to control (%)", value=False)
+    normalize_to = st.selectbox(
+        "Normalize to",
+        ["DMSO (D_x)", "Control (C)", "None — raw MTS values"],
+        index=0
+    )
     show_debug = st.checkbox("Show fit diagnostics", value=True)
     st.divider()
-    st.markdown("**Plate template format:**  \n96 wells. 8 rows (A–H) × 12 cols (1–12).  \nIdentity format: `Drug_concentration` e.g. `Gen1S_0,01`")
+    st.markdown("**Plate template format:**  \n96 wells. 8 rows (A–H) × 12 cols (1–12).  \nIdentity format: `Drug_concentration` e.g. `AUF_0,1`")
 
 
 # ─────────────────────────────────────────────
@@ -464,14 +478,23 @@ with st.expander("📌 Example run — see what your files should look like"):
         st.dataframe(ex_template.style.applymap(_style_template), use_container_width=True)
 
     with ex_c2:
-        st.markdown("**Example: Raw MTS plate (490 nm)**")
+        st.markdown("**Example: Raw MTS plate — both wavelengths required**")
         st.caption(
-            "▶ Raw absorbance from the Cytation plate reader for 2D tumor cell drug screening.\n\n"
-            "▶ Higher values (green) = more viable cells. Border wells show background signal.\n\n"
-            "▶ The heatmap clearly reflects the dosage in plate template."
+            "▶ Your raw MTS file must contain absorbance readings at both 490 nm and 630 nm.\n\n"
+            "▶ 490 nm captures the formazan signal. 630 nm is the background reference.\n\n"
+            "▶ The app subtracts 630 from 490 automatically to correct for background."
         )
+        combined_rows = []
+        for r in ROW_LABELS:
+            row490 = ex_abs490.loc[r].rename(lambda c: f"{c}")
+            row630 = ex_abs630.loc[r].rename(lambda c: f"{c}")
+            row490.name = f"{r} — 490nm"
+            row630.name = f"{r} — 630nm"
+            combined_rows.append(row490)
+            combined_rows.append(row630)
+        combined = pd.DataFrame(combined_rows)
         st.dataframe(
-            ex_abs490.style.format("{:.4f}").background_gradient(cmap="YlGn", axis=None),
+            combined.style.format("{:.4f}").background_gradient(cmap="YlGn", axis=None),
             use_container_width=True,
         )
 
@@ -584,7 +607,7 @@ with tpl_tab2:
     st.caption(
         "▶ Click a well to select it. Click and drag to select multiple wells.\n\n"
         "▶ Type a label in the box below and click **Assign** to label all selected wells.\n\n"
-        "▶ Format: `DrugName_Concentration` e.g. `AUF_0,1` for 0.1 µM. Use `C` for control, `D_x,xx` for DMSO, `W` for water/empty.\n\n"
+        "▶ Format: `DrugName_Concentration` e.g. `AUF_0,1` for 0.1 µM. Use `C` for control, `D_x,x` for DMSO, `W` for water/empty.\n\n"
         "▶ When done, click **💾 Copy plate data**."
     )
 
@@ -681,7 +704,7 @@ with tpl_tab2:
     </style>
 
     <div id="controls">
-        <input id="label-input" type="text" placeholder="e.g. Gen1S_0,01 or C or W" />
+        <input id="label-input" type="text" placeholder="e.g. AUF_0,1 or C or W" />
         <button id="assign-btn" onclick="assignLabel()">Assign to selected</button>
         <button id="clear-btn" onclick="clearSelection()">Clear selection</button>
         <button id="reset-btn" onclick="resetPlate()">🔄 Reset plate to W</button>
@@ -985,7 +1008,10 @@ if run_clicked:
         st.session_state.template = template
         st.session_state.long_df = long_df
 
-        st.success("✅ Pipeline complete!")
+        if abs630.eq(0).all().all():
+            st.warning("⚠️ No 630 nm readings found — pipeline ran on 490 nm only, no background correction applied.")
+        else:
+            st.success("✅ Pipeline complete!")
     except Exception as e:
         st.error(f"Pipeline failed: {e}")
         st.stop()
@@ -1044,17 +1070,6 @@ if dose.empty:
     st.warning("No dosed rows found. Check Identity formatting (Drug_concentration).")
     st.stop()
 
-# Normalization
-control_choice = None
-if normalize:
-    ctrl_candidates = sorted(
-        long_df.loc[long_df["Concentration_nM"].isna(), "Drug"].dropna().unique().tolist()
-    )
-    if ctrl_candidates:
-        control_choice = st.selectbox("Control label for 100%", ctrl_candidates)
-    else:
-        st.warning("No control labels found (wells with no concentration).")
-
 # Summarize
 dose_summary = (
     dose.groupby(["Drug", "Concentration_nM", "log10_Concentration_nM"], as_index=False)
@@ -1062,21 +1077,38 @@ dose_summary = (
         .sort_values(["Drug", "Concentration_nM"])
 )
 
-if normalize and control_choice:
-    ctrl_vals = long_df.loc[long_df["Drug"] == control_choice, "MTS"].dropna()
-    if len(ctrl_vals) > 0:
-        ctrl_mean = float(ctrl_vals.mean())
-        dose_summary["y"] = 100 * dose_summary["mean"] / ctrl_mean
-        dose_summary["y_sd"] = 100 * dose_summary["sd"] / ctrl_mean
-        y_label = "Response (% of control)"
+# Normalization
+dmso_vals = long_df.loc[long_df["Drug"] == "D", "MTS"].dropna()
+ctrl_vals = long_df.loc[long_df["Drug"] == "C", "MTS"].dropna()
+
+if normalize_to == "DMSO (D_x)":
+    if len(dmso_vals) > 0:
+        ref_mean = float(dmso_vals.mean())
+        st.caption(f"ℹ️ Normalising to DMSO mean: {ref_mean:.4f} (n={len(dmso_vals)} wells)")
+        y_label = "Normalised absorbance (DMSO = 1)"
     else:
-        dose_summary["y"] = dose_summary["mean"]
-        dose_summary["y_sd"] = dose_summary["sd"]
+        ref_mean = None
+        st.warning("⚠️ No DMSO wells (D_x) found — plotting raw MTS values.")
         y_label = "MTS (absorbance)"
+elif normalize_to == "Control (C)":
+    if len(ctrl_vals) > 0:
+        ref_mean = float(ctrl_vals.mean())
+        st.caption(f"ℹ️ Normalising to Control mean: {ref_mean:.4f} (n={len(ctrl_vals)} wells)")
+        y_label = "Normalised absorbance (Control = 1)"
+    else:
+        ref_mean = None
+        st.warning("⚠️ No Control wells (C) found — plotting raw MTS values.")
+        y_label = "MTS (absorbance)"
+else:
+    ref_mean = None
+    y_label = "MTS (absorbance)"
+
+if ref_mean is not None:
+    dose_summary["y"] = dose_summary["mean"] / ref_mean
+    dose_summary["y_sd"] = dose_summary["sd"] / ref_mean
 else:
     dose_summary["y"] = dose_summary["mean"]
     dose_summary["y_sd"] = dose_summary["sd"]
-    y_label = "MTS (absorbance)"
 
 # Drug selector
 drugs = sorted(dose_summary["Drug"].dropna().unique().tolist())
@@ -1094,23 +1126,55 @@ if show_debug:
     st.caption(f"Dose points: {len(sub)} rows, {unique_doses} unique concentrations.")
 
 fig = go.Figure()
+
+# Individual replicate points
+drug_dose = dose[dose["Drug"] == drug_choice].copy()
+if ref_mean is not None:
+    drug_dose["y_norm"] = drug_dose["MTS"] / ref_mean
+    dmso_replicates_y = dmso_vals.values / ref_mean
+    dmso_replicates_x = [0.0] * len(dmso_vals)
+    all_rep_x = list(dmso_replicates_x) + list(drug_dose["log10_Concentration_nM"].astype(float))
+    all_rep_y = list(dmso_replicates_y) + list(drug_dose["y_norm"].astype(float))
+else:
+    all_rep_x = list(drug_dose["log10_Concentration_nM"].astype(float))
+    all_rep_y = list(drug_dose["MTS"].astype(float))
+
 fig.add_trace(go.Scatter(
-    x=x, y=y,
+    x=all_rep_x,
+    y=all_rep_y,
     mode="markers",
-    error_y=dict(type="data", array=yerr, visible=True, color="#7dd3fc"),
-    marker=dict(size=9, color="#7dd3fc", line=dict(color="#1e40af", width=1.5)),
+    marker=dict(size=6, color="grey", opacity=0.5),
+    name="Replicates",
+    hoverinfo="skip",
+))
+
+# Mean ± SD — prepend DMSO mean at x=0
+if ref_mean is not None and len(dmso_vals) > 0:
+    dmso_mean_y = float(dmso_vals.mean()) / ref_mean  # should be 1.0
+    dmso_sd_y = float(dmso_vals.std()) / ref_mean
+    plot_x = np.concatenate([[0.0], x])
+    plot_y = np.concatenate([[dmso_mean_y], y])
+    plot_yerr = np.concatenate([[dmso_sd_y], yerr])
+else:
+    plot_x, plot_y, plot_yerr = x, y, yerr
+
+fig.add_trace(go.Scatter(
+    x=plot_x, y=plot_y,
+    mode="markers",
+    error_y=dict(type="data", array=plot_yerr, visible=True, color="#1a1a2e"),
+    marker=dict(size=10, color="#1a1a2e", line=dict(color="#1a1a2e", width=1.5)),
     name="Mean ± SD",
-    hovertext=[f"{cn:.3g} nM | n={nn}" for cn, nn in zip(sub["Concentration_nM"], sub["n"])],
+    hovertext=[f"DMSO | n={len(dmso_vals)}"] + [f"{cn:.3g} nM | n={nn}" for cn, nn in zip(sub["Concentration_nM"], sub["n"])] if ref_mean is not None else [f"{cn:.3g} nM | n={nn}" for cn, nn in zip(sub["Concentration_nM"], sub["n"])],
     hoverinfo="text+x+y",
 ))
 
 ic50_label = ""
 if unique_doses >= 4:
-    p0 = [float(np.min(y)), float(np.max(y)), float(np.median(x)), 1.0]
-    x_min, x_max = float(np.min(x)), float(np.max(x))
+    p0 = [float(np.min(plot_y)), float(np.max(plot_y)), float(np.median(plot_x)), 1.0]
+    x_min, x_max = float(np.min(plot_x)), float(np.max(plot_x))
     bounds = ([-np.inf, -np.inf, x_min - 2, -5], [np.inf, np.inf, x_max + 2, 5])
     try:
-        popt, _ = curve_fit(four_pl, x, y, p0=p0, bounds=bounds, maxfev=200000)
+        popt, _ = curve_fit(four_pl, plot_x, plot_y, p0=p0, bounds=bounds, maxfev=200000)
         bottom, top, logIC50, hill = popt
         ic50_nM = 10 ** logIC50
 
